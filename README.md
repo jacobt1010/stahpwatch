@@ -2,6 +2,19 @@
 
 A single-purpose analog stopwatch for iPhone: one big button, a dial drawn in code, fully custom colors, and a Lock Screen / Dynamic Island Live Activity. Swift + SwiftUI, iOS 17+, iPhone only, portrait only, no third-party packages. See [SPEC.md](SPEC.md) for the full design.
 
+<p align="center">
+  <img src="docs/idle.png" width="160" alt="Idle: dial at 00:00.00 with the Start button and Customize pill">
+  <img src="docs/running.png" width="160" alt="Running: the hand sweeping at 07:41 with the Pause button">
+  <img src="docs/paused.png" width="160" alt="Paused at 23:04.61 with green Play and red Stop buttons">
+  <img src="docs/customize.png" width="160" alt="Customize: color swatches with Match Background toggles">
+  <img src="docs/custom-colors.png" width="160" alt="A custom color scheme: navy background, cream dial and coral hand">
+</p>
+<p align="center"><sub>Idle · Running · Paused · Customize · Custom colors</sub></p>
+
+<p align="center">
+  <img src="docs/demo.gif" width="280" alt="Start, Pause, Play, Pause and Stop in sequence, with the hands sweeping smoothly">
+</p>
+
 ## Build
 
 The Xcode project is generated from `project.yml` with [XcodeGen](https://github.com/yonaskolb/XcodeGen) and isn't committed.
@@ -45,6 +58,16 @@ xcodebuild -project stahpwatch.xcodeproj -scheme stahpwatch \
 The tests cover elapsed-time math, every transition, saving and restoring state (including a simulated force-quit), readout formatting (including the one-hour switch), settings and Match Background, and the screen-awake hold rules.
 
 `DialSnapshot` is skipped by default. Set `TEST_RUNNER_DIAL_SNAPSHOT_DIR=/some/dir` to render the dial at 2× for comparison with the Figma dial reference (frame `2:4` in the StopWatch file). That reference isn't published here; export it locally to `Design/dial-reference.png`, which git ignores. It also renders the Paused screen at iPhone SE (375 × 647) and Pro Max (440 × 868) safe-area sizes.
+
+## Screenshots and demo
+
+The images in `docs/` come from the iPhone 17 Simulator with the status bar set to 9:41 (`xcrun simctl status_bar booted override --time 9:41`). The demo GIF is a Simulator screen recording (`xcrun simctl io booted recordVideo demo.mov`) converted with:
+
+```bash
+swift Scripts/make_gif.swift demo.mov docs/demo.gif 320 15 1.6 31
+```
+
+The arguments are width, frames per second, and the start and end of the clip in seconds.
 
 ## App icon
 
