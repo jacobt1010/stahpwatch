@@ -2,7 +2,8 @@ import SwiftUI
 import XCTest
 @testable import stahpwatch
 
-/// Renders the dial at 2× to a PNG for side-by-side comparison with Design/dial-reference.png.
+/// Renders the dial at 2× to a PNG for side-by-side comparison with the Figma dial reference
+/// (exported locally to Design/dial-reference.png, which is git-ignored and not in the repo).
 /// Runs only when DIAL_SNAPSHOT_DIR is set, so it never writes files during normal test runs.
 @MainActor
 final class DialSnapshot: XCTestCase {
