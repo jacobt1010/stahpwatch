@@ -5,7 +5,12 @@ struct MainView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.scenePhase) private var scenePhase
 
+    #if DEBUG
+    // `-showCustomize` opens straight to Customize, for Simulator screenshots.
+    @State private var showCustomize = ProcessInfo.processInfo.arguments.contains("-showCustomize")
+    #else
     @State private var showCustomize = false
+    #endif
     @State private var screenAwake = ScreenAwakeController()
 
     var body: some View {
