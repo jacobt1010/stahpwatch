@@ -1,0 +1,6 @@
+// Shared build settings. Personal signing lives in Local.xcconfig (not committed).
+// Copy Local.xcconfig.example to Local.xcconfig and fill in your values.
+DEVELOPMENT_TEAM =
+BUNDLE_ID_PREFIX = com.jacobtehrani
+
+#include? "Local.xcconfig"
