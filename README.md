@@ -44,7 +44,7 @@ xcodebuild -project stahpwatch.xcodeproj -scheme stahpwatch \
 
 The tests cover elapsed-time math, every transition, saving and restoring state (including a simulated force-quit), readout formatting (including the one-hour switch), settings and Match Background, and the screen-awake hold rules.
 
-`DialSnapshot` is skipped by default. Set `TEST_RUNNER_DIAL_SNAPSHOT_DIR=/some/dir` to render the dial at 2× for comparison with `Design/dial-reference.png`. It also renders the Paused screen at iPhone SE (375 × 647) and Pro Max (440 × 868) safe-area sizes.
+`DialSnapshot` is skipped by default. Set `TEST_RUNNER_DIAL_SNAPSHOT_DIR=/some/dir` to render the dial at 2× for comparison with the Figma dial reference (frame `2:4` in the StopWatch file). That reference isn't published here; export it locally to `Design/dial-reference.png`, which git ignores. It also renders the Paused screen at iPhone SE (375 × 647) and Pro Max (440 × 868) safe-area sizes.
 
 ## App icon
 
@@ -53,6 +53,10 @@ The tests cover elapsed-time math, every transition, saving and restoring state 
 ```bash
 swift Scripts/make_icon.swift
 ```
+
+## License
+
+stahpwatch is released under the [MIT License](LICENSE). Copyright (c) 2026 Jacob Tehrani.
 
 ## Structure
 

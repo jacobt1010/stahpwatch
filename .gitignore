@@ -21,3 +21,6 @@ build/
 # Local tools and personal signing
 .tools/
 Config/Local.xcconfig
+
+# Design reference exports (Figma); kept local, not published
+Design/
