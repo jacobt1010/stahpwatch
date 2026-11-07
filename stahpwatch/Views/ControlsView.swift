@@ -22,7 +22,7 @@ struct ControlsView: View {
                                 .font(.system(size: 40 * s, weight: .bold))
                                 .foregroundStyle(settings.color(.playIcon))
                                 .frame(width: 133 * s, height: Layout.buttonHeight * s)
-                                .background(settings.color(.play), in: RoundedRectangle(cornerRadius: 30 * s))
+                                .background(settings.color(.play), in: RoundedRectangle(cornerRadius: settings.style.buttonRadius * s))
                         }
                         .accessibilityLabel("Resume")
 
@@ -31,7 +31,7 @@ struct ControlsView: View {
                                 .fill(settings.color(.stopIcon))
                                 .frame(width: 32 * s, height: 32 * s)
                                 .frame(width: 134 * s, height: Layout.buttonHeight * s)
-                                .background(settings.color(.stop), in: RoundedRectangle(cornerRadius: 30 * s))
+                                .background(settings.color(.stop), in: RoundedRectangle(cornerRadius: settings.style.buttonRadius * s))
                         }
                         .accessibilityLabel("Reset")
                     }
@@ -57,7 +57,7 @@ struct ControlsView: View {
                 .font(.system(size: 40 * s, weight: .bold))
                 .foregroundStyle(settings.color(text))
                 .frame(width: 282 * s, height: Layout.buttonHeight * s)
-                .background(settings.color(fill), in: RoundedRectangle(cornerRadius: 30 * s))
+                .background(settings.color(fill), in: RoundedRectangle(cornerRadius: settings.style.buttonRadius * s))
         }
         .accessibilityLabel(title)
     }

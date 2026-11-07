@@ -13,6 +13,8 @@ struct CustomizeView: View {
         let ink = settings.color(.fontTicks)
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                header("Style")
+                stylePicker
                 header("Dial")
                 ForEach(ColorSetting.allCases.filter { $0.group == .dial }) { colorRow($0) }
                 header("Buttons")
@@ -45,10 +47,36 @@ struct CustomizeView: View {
             DimTimerPicker(minutes: Binding(get: { settings.dimMinutes }, set: { settings.dimMinutes = $0 }))
                 .presentationDetents([.height(320)])
         }
-        .alert("Reset all colors and the Dim Timer?", isPresented: $confirmingReset) {
+        .alert("Reset the dial style, all colors and the Dim Timer?", isPresented: $confirmingReset) {
             Button("Reset", role: .destructive) { settings.resetToDefaults() }
             Button("Cancel", role: .cancel) {}
         }
+    }
+
+    private var stylePicker: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 12) {
+                ForEach(DialStyle.allCases) { style in
+                    Button { settings.style = style } label: {
+                        VStack(spacing: 6) {
+                            DialView(style: style, elapsed: { _ in 42 }, isRunning: false, colors: settings.dialColors(for: style))
+                                .frame(width: 84, height: 89)
+                                .background(settings.dialColors(for: style).background)
+                                .overlay(Rectangle().strokeBorder(settings.color(.fontTicks), lineWidth: style == settings.style ? 4 : 1))
+                            Text(style.title)
+                                .font(.system(size: 15, weight: .bold, design: style.fontDesign))
+                        }
+                    }
+                    .buttonStyle(PressDimStyle())
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(style.title) dial style")
+                    .accessibilityAddTraits(style == settings.style ? [.isButton, .isSelected] : .isButton)
+                }
+            }
+            .padding(.trailing, 24)
+        }
+        .scrollIndicators(.hidden)
+        .padding(.trailing, -24)
     }
 
     private func header(_ title: String) -> some View {

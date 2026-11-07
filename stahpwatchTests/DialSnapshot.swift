@@ -9,15 +9,17 @@ import XCTest
 final class DialSnapshot: XCTestCase {
     func testRenderDial() throws {
         guard let dir = ProcessInfo.processInfo.environment["DIAL_SNAPSHOT_DIR"] else { throw XCTSkip("DIAL_SNAPSHOT_DIR not set") }
-        let colors = DialColors(background: .black, fontTicks: .white, secondHand: Color(red: 1, green: 0x8B / 255, blue: 0))
-        for (name, t) in [("dial-0", 0.0), ("dial-1937", 1937.5)] {
-            let view = DialView(elapsed: { _ in t }, isRunning: false, colors: colors)
-                .frame(width: 390, height: 414)
-                .background(Color.black)
-            let renderer = ImageRenderer(content: view)
-            renderer.scale = 2
-            let data = try XCTUnwrap(renderer.uiImage?.pngData())
-            try data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
+        let settings = AppSettings(defaults: UserDefaults(suiteName: "stahpwatch.snapshot.dial")!)
+        for style in DialStyle.allCases {
+            for (name, t) in [("idle", 0.0), ("running", 1937.5), ("hours", 3735.33), ("bottom", 1830.0)] {
+                let view = DialView(style: style, elapsed: { _ in t }, isRunning: false, colors: settings.dialColors(for: style))
+                    .frame(width: 390, height: 414)
+                    .background(settings.dialColors(for: style).background)
+                let renderer = ImageRenderer(content: view)
+                renderer.scale = 2
+                let data = try XCTUnwrap(renderer.uiImage?.pngData())
+                try data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(style.rawValue)-\(name).png"))
+            }
         }
     }
 
