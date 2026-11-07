@@ -25,6 +25,11 @@ struct DimTimerPicker: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
+            if minutes != AppSettings.defaultDimMinutes {
+                Button("Reset to \(AppSettings.defaultDimMinutes) minutes") { minutes = AppSettings.defaultDimMinutes }
+                    .font(.footnote.bold())
+                    .padding(.top, 6)
+            }
         }
     }
 }
