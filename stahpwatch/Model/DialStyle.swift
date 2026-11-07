@@ -7,7 +7,7 @@ struct Palette: Codable, Equatable {
 }
 
 /// The selectable stopwatch faces. Each has its own drawing, font and default colors.
-enum DialStyle: String, CaseIterable, Identifiable {
+enum DialStyle: String, CaseIterable, Codable, Identifiable {
     case paper, original, pulse, orbit, block
 
     var id: String { rawValue }

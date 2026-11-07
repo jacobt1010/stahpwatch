@@ -87,8 +87,9 @@ stahpwatch is released under the [MIT License](LICENSE). Copyright (c) 2026 Jaco
 | --- | --- |
 | `stahpwatch/Model/StopwatchState.swift` | Timestamp-only timing, transitions, UserDefaults store |
 | `stahpwatch/Model/StopwatchModel.swift` | Observable source of truth shared by the UI and Live Activity intents |
-| `stahpwatch/Model/AppSettings.swift` | The dial style, the 14 settings, Match Background, reset |
+| `stahpwatch/Model/AppSettings.swift` | Looks, the 14 settings, Match Background, migration |
 | `stahpwatch/Model/DialStyle.swift` | The five dial styles: font, button shape and default colors |
+| `stahpwatch/Model/Look.swift` | A named dial style and colors; one is always active |
 | `stahpwatch/Model/ScreenAwakeController.swift` | Dim Timer hold and touch-reset countdown |
 | `stahpwatch/Model/LiveActivityController.swift` | Starts, updates and ends the Live Activity |
 | `stahpwatch/Views/` | `MainView`, `DialView` and `DialRenderer` (a static face Canvas under a live TimelineView Canvas), `ControlsView`, `CustomizeView`, pickers |
@@ -104,5 +105,6 @@ stahpwatch is released under the [MIT License](LICENSE). Copyright (c) 2026 Jaco
 - **Readout hundredths** are truncated, not rounded.
 - **Layout:** buttons scale with screen width. The dial scales with width too, but shrinks further on short screens (iPhone SE) so everything fits. Space for the "Paused" label and the Customize pill is always reserved, so the buttons never move between states.
 - **Live Activity running time** counts up with `Text(timerInterval:)` over a one-year range.
-- **Dial styles:** each style keeps its own colors, so switching styles never loses a customization. Reset to defaults restores Paper and every style's colors. Colors saved by v1 become Original's colors.
+- **Looks:** one Look is always active, and changing a color or style edits it, with no Save step. Changing style keeps the Look's colors; the Use Default Colors button applies the style's defaults. The New tile and Duplicate make a copy to experiment on. Colors customized before Looks existed became Looks, such as My Original.
+- **Dim Timer** isn't part of a Look, and it has its own reset in its picker.
 - **Debug only:** launching with `-showCustomize` opens straight to Customize, for Simulator screenshots.

@@ -11,10 +11,12 @@ final class DialSnapshot: XCTestCase {
         guard let dir = ProcessInfo.processInfo.environment["DIAL_SNAPSHOT_DIR"] else { throw XCTSkip("DIAL_SNAPSHOT_DIR not set") }
         let settings = AppSettings(defaults: UserDefaults(suiteName: "stahpwatch.snapshot.dial")!)
         for style in DialStyle.allCases {
+            settings.style = style
+            settings.useStyleColors()
             for (name, t) in [("idle", 0.0), ("running", 1937.5), ("hours", 3735.33), ("bottom", 1830.0)] {
-                let view = DialView(style: style, elapsed: { _ in t }, isRunning: false, colors: settings.dialColors(for: style))
+                let view = DialView(style: style, elapsed: { _ in t }, isRunning: false, colors: settings.dialColors())
                     .frame(width: 390, height: 414)
-                    .background(settings.dialColors(for: style).background)
+                    .background(settings.dialColors().background)
                 let renderer = ImageRenderer(content: view)
                 renderer.scale = 2
                 let data = try XCTUnwrap(renderer.uiImage?.pngData())

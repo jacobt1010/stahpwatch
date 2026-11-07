@@ -1,20 +1,28 @@
 import SwiftUI
 
-/// The 14 settings in three groups. Every change applies immediately and is saved.
+/// The active Look's style and colors, plus the Dim Timer. Every change applies immediately and is saved.
 struct CustomizeView: View {
     @Environment(AppSettings.self) private var settings
     let layout: Layout
 
     @State private var editing: ColorSetting?
     @State private var editingDimTimer = false
-    @State private var confirmingReset = false
+    @State private var confirmingStyleColors = false
+    @State private var confirmingDelete = false
 
     var body: some View {
         let ink = settings.color(.fontTicks)
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                header("Looks")
+                LooksRow()
                 header("Style")
                 stylePicker
+                if !settings.usesStyleColors {
+                    Button("Use \(settings.style.title)'s Default Colors") { confirmingStyleColors = true }
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(settings.color(.secondHand))
+                }
                 header("Dial")
                 ForEach(ColorSetting.allCases.filter { $0.group == .dial }) { colorRow($0) }
                 header("Buttons")
@@ -22,11 +30,13 @@ struct CustomizeView: View {
                 header("Screen")
                 dimTimerRow
 
-                Button("Reset to defaults") { confirmingReset = true }
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(settings.color(.secondHand))
-                    .padding(.top, 24)
-                    .padding(.bottom, 8)
+                if settings.looks.count > 1 {
+                    Button("Delete This Look") { confirmingDelete = true }
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(settings.color(.stop))
+                        .padding(.top, 24)
+                        .padding(.bottom, 8)
+                }
             }
             .padding(.leading, 36)
             .padding(.trailing, 24)
@@ -47,8 +57,12 @@ struct CustomizeView: View {
             DimTimerPicker(minutes: Binding(get: { settings.dimMinutes }, set: { settings.dimMinutes = $0 }))
                 .presentationDetents([.height(320)])
         }
-        .alert("Reset the dial style, all colors and the Dim Timer?", isPresented: $confirmingReset) {
-            Button("Reset", role: .destructive) { settings.resetToDefaults() }
+        .alert("Delete \(settings.activeLook.name)?", isPresented: $confirmingDelete) {
+            Button("Delete", role: .destructive) { settings.delete(settings.activeLook) }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("Replace this Look's colors with \(settings.style.title)'s defaults?", isPresented: $confirmingStyleColors) {
+            Button("Replace", role: .destructive) { settings.useStyleColors() }
             Button("Cancel", role: .cancel) {}
         }
     }
@@ -58,14 +72,8 @@ struct CustomizeView: View {
             HStack(spacing: 12) {
                 ForEach(DialStyle.allCases) { style in
                     Button { settings.style = style } label: {
-                        VStack(spacing: 6) {
-                            DialView(style: style, elapsed: { _ in 42 }, isRunning: false, colors: settings.dialColors(for: style))
-                                .frame(width: 84, height: 89)
-                                .background(settings.dialColors(for: style).background)
-                                .overlay(Rectangle().strokeBorder(settings.color(.fontTicks), lineWidth: style == settings.style ? 4 : 1))
-                            Text(style.title)
-                                .font(.system(size: 15, weight: .bold, design: style.fontDesign))
-                        }
+                        DialTile(title: style.title, style: style, colors: settings.dialColors(),
+                                 border: settings.color(.fontTicks), isSelected: style == settings.style)
                     }
                     .buttonStyle(PressDimStyle())
                     .accessibilityElement(children: .ignore)

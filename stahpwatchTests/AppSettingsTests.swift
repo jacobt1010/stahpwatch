@@ -15,10 +15,17 @@ final class AppSettingsTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
     }
 
-    func testDefaults() {
+    private func encoded(_ palette: Palette) -> Data {
+        try! JSONEncoder().encode(palette)
+    }
+
+    func testFreshInstall() {
         let s = AppSettings(defaults: defaults)
         XCTAssertEqual(ColorSetting.allCases.count + 1, 14, "13 colors plus the Dim Timer")
+        XCTAssertEqual(s.looks.map(\.name), ["Look 1"])
+        XCTAssertEqual(s.activeLook.id, s.looks[0].id)
         XCTAssertEqual(s.style, .paper)
+        XCTAssertTrue(s.usesStyleColors)
         XCTAssertEqual(s.effectiveHex(.background), "#F2EBDD")
         XCTAssertEqual(s.effectiveHex(.secondHand), "#D4431C")
         XCTAssertEqual(s.dimMinutes, 10)
@@ -26,15 +33,6 @@ final class AppSettingsTests: XCTestCase {
         for text in [ColorSetting.startText, .pauseText, .playIcon, .stopIcon] {
             XCTAssertTrue(s.matchesBackground(text))
         }
-    }
-
-    func testOriginalKeepsV1Colors() {
-        let s = AppSettings(defaults: defaults)
-        s.style = .original
-        XCTAssertEqual(s.effectiveHex(.background), "#000000")
-        XCTAssertEqual(s.effectiveHex(.secondHand), "#FF8B00")
-        XCTAssertEqual(s.effectiveHex(.play), "#4F7A5A")
-        XCTAssertEqual(s.effectiveHex(.customizeText), "#000000")
     }
 
     func testEveryStylePaletteIsComplete() {
@@ -46,34 +44,40 @@ final class AppSettingsTests: XCTestCase {
         }
     }
 
-    func testEachStyleKeepsItsOwnColors() {
+    func testOriginalKeepsV1Colors() {
         let s = AppSettings(defaults: defaults)
-        s.setHex("#123456", for: .secondHand)
-        s.style = .block
-        XCTAssertEqual(s.effectiveHex(.secondHand), "#E4FF4A")
-        s.setHex("#654321", for: .secondHand)
-        s.style = .paper
-        XCTAssertEqual(s.effectiveHex(.secondHand), "#123456")
-
-        let relaunched = AppSettings(defaults: defaults)
-        XCTAssertEqual(relaunched.style, .paper)
-        XCTAssertEqual(relaunched.effectiveHex(.secondHand), "#123456")
-        relaunched.style = .block
-        XCTAssertEqual(relaunched.effectiveHex(.secondHand), "#654321")
+        s.style = .original
+        s.useStyleColors()
+        XCTAssertEqual(s.effectiveHex(.background), "#000000")
+        XCTAssertEqual(s.effectiveHex(.secondHand), "#FF8B00")
+        XCTAssertEqual(s.effectiveHex(.play), "#4F7A5A")
+        XCTAssertEqual(s.effectiveHex(.customizeText), "#000000")
     }
 
-    func testV1ColorsMoveToOriginal() {
-        defaults.set("#112233", forKey: "settings.color.background")
-        defaults.set(false, forKey: "settings.match.pauseText")
-        defaults.set("#445566", forKey: "settings.color.pauseText")
-
+    func testEditsChangeTheActiveLook() {
         let s = AppSettings(defaults: defaults)
-        XCTAssertEqual(s.style, .paper, "new default applies")
-        XCTAssertEqual(s.effectiveHex(.background), "#F2EBDD")
-        s.style = .original
-        XCTAssertEqual(s.effectiveHex(.background), "#112233")
-        XCTAssertEqual(s.effectiveHex(.pauseText), "#445566")
-        XCTAssertNil(defaults.object(forKey: "settings.color.background"), "migrates once")
+        s.setHex("#123456", for: .secondHand)
+        XCTAssertEqual(s.looks[0].palette.hexes["secondHand"], "#123456")
+        XCTAssertEqual(AppSettings(defaults: defaults).effectiveHex(.secondHand), "#123456")
+    }
+
+    func testChangingStyleKeepsColors() {
+        let s = AppSettings(defaults: defaults)
+        s.setHex("#123456", for: .secondHand)
+        let background = s.effectiveHex(.background)
+        s.style = .orbit
+        XCTAssertEqual(s.activeLook.style, .orbit)
+        XCTAssertEqual(s.effectiveHex(.secondHand), "#123456")
+        XCTAssertEqual(s.effectiveHex(.background), background)
+        XCTAssertFalse(s.usesStyleColors)
+    }
+
+    func testUseStyleColors() {
+        let s = AppSettings(defaults: defaults)
+        s.style = .orbit
+        s.useStyleColors()
+        XCTAssertEqual(s.effectiveHex(.background), "#0F1B2D")
+        XCTAssertTrue(s.usesStyleColors)
     }
 
     func testMatchBackgroundFollowsLaterChanges() {
@@ -107,20 +111,120 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(r.dimMinutes, 0)
     }
 
-    func testResetRestoresTable() {
+    func testAddLookCopiesAndSwitches() {
         let s = AppSettings(defaults: defaults)
-        s.setHex("#FFFFFF", for: .background)
-        s.setMatchesBackground(true, for: .customizeText)
+        s.setHex("#123456", for: .secondHand)
+        s.dimMinutes = 25
+        s.addLook(named: "  Night  ")
+        XCTAssertEqual(s.looks.map(\.name), ["Look 1", "Night"])
+        XCTAssertEqual(s.activeLook.name, "Night")
+
+        s.setHex("#ABCDEF", for: .secondHand)
+        XCTAssertEqual(s.looks[0].palette.hexes["secondHand"], "#123456", "the copy is independent")
+        s.select(s.looks[0])
+        XCTAssertEqual(s.effectiveHex(.secondHand), "#123456")
+        XCTAssertEqual(s.dimMinutes, 25, "the Dim Timer isn't part of a Look")
+    }
+
+    func testActiveLookSurvivesRelaunch() {
+        let s = AppSettings(defaults: defaults)
+        s.addLook(named: "Second")
         s.style = .orbit
-        s.dimMinutes = 42
-        s.resetToDefaults()
-        XCTAssertEqual(s.style, .paper)
-        for setting in ColorSetting.allCases where !setting.canMatchBackground {
-            XCTAssertEqual(s.effectiveHex(setting), DialStyle.paper.defaultPalette.hexes[setting.rawValue], setting.title)
-        }
-        XCTAssertFalse(s.matchesBackground(.customizeText))
-        XCTAssertEqual(s.dimMinutes, 10)
-        XCTAssertEqual(AppSettings(defaults: defaults).effectiveHex(.background), "#F2EBDD")
+
+        let r = AppSettings(defaults: defaults)
+        XCTAssertEqual(r.looks, s.looks)
+        XCTAssertEqual(r.activeLook.name, "Second")
+        XCTAssertEqual(r.style, .orbit)
+    }
+
+    func testDuplicate() {
+        let s = AppSettings(defaults: defaults)
+        s.addLook(named: "Other")
+        s.duplicate(s.looks[0])
+        XCTAssertEqual(s.looks.map(\.name), ["Look 1", "Look 1 Copy", "Other"])
+        XCTAssertEqual(s.activeLook.name, "Look 1 Copy")
+        s.duplicate(s.looks[0])
+        XCTAssertTrue(s.looks.contains { $0.name == "Look 1 Copy 2" })
+    }
+
+    func testRename() {
+        let s = AppSettings(defaults: defaults)
+        s.rename(s.looks[0], to: "   ")
+        XCTAssertEqual(s.looks[0].name, "Look 1", "a blank name is ignored")
+        s.rename(s.looks[0], to: String(repeating: "x", count: 50))
+        XCTAssertEqual(s.looks[0].name.count, 30)
+    }
+
+    func testDelete() {
+        let s = AppSettings(defaults: defaults)
+        s.addLook(named: "Two")
+        s.addLook(named: "Three")
+        s.delete(s.looks[1])
+        XCTAssertEqual(s.looks.map(\.name), ["Look 1", "Three"])
+        XCTAssertEqual(s.activeLook.name, "Three", "deleting another Look keeps the active one")
+
+        s.delete(s.activeLook)
+        XCTAssertEqual(s.activeLook.name, "Look 1", "deleting the active Look moves to a neighbor")
+
+        s.delete(s.activeLook)
+        XCTAssertEqual(s.looks.count, 1, "the last Look can't be deleted")
+        XCTAssertEqual(AppSettings(defaults: defaults).looks.map(\.name), ["Look 1"])
+    }
+
+    func testDefaultLookNames() {
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.nextLookName, "Look 2")
+        s.addLook(named: "")
+        XCTAssertEqual(s.looks.last?.name, "Look 2")
+        s.delete(s.looks[0])
+        XCTAssertEqual(s.nextLookName, "Look 1")
+    }
+
+    func testMigratesSavedLooksAndCustomColors() {
+        var custom = DialStyle.original.defaultPalette
+        custom.hexes["secondHand"] = "#112233"
+        var look = Look(name: "Saved", style: .paper, palette: DialStyle.paper.defaultPalette)
+        look.palette.hexes["play"] = "#445566"
+        defaults.set(try! JSONEncoder().encode([look]), forKey: "settings.looks")
+        defaults.set(encoded(custom), forKey: "settings.palette.original")
+        defaults.set(encoded(look.palette), forKey: "settings.palette.paper")
+        defaults.set(encoded(DialStyle.block.defaultPalette), forKey: "settings.palette.block")
+        defaults.set("paper", forKey: "settings.dialStyle")
+
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.looks.map(\.name), ["Saved", "My Original"], "only customized, unsaved colors get a Look")
+        XCTAssertEqual(s.activeLook.name, "Saved", "the app keeps showing what it showed")
+        XCTAssertEqual(s.looks[1].palette, custom)
+        XCTAssertNil(defaults.object(forKey: "settings.palette.original"))
+        XCTAssertNil(defaults.object(forKey: "settings.dialStyle"))
+        XCTAssertEqual(AppSettings(defaults: defaults).looks.count, 2, "migrates once")
+    }
+
+    func testMigrationKeepsAWorkingStyleWithNoLook() {
+        defaults.set("orbit", forKey: "settings.dialStyle")
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.looks.map(\.name), ["Look 1"])
+        XCTAssertEqual(s.style, .orbit)
+        XCTAssertEqual(s.effectiveHex(.background), "#0F1B2D")
+    }
+
+    func testV1ColorsBecomeALook() {
+        defaults.set("#112233", forKey: "settings.color.background")
+        defaults.set(false, forKey: "settings.match.pauseText")
+        defaults.set("#445566", forKey: "settings.color.pauseText")
+
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.activeLook.style, .paper, "new default applies")
+        let saved = s.looks.first { $0.name == "My Original" }
+        XCTAssertEqual(saved?.style, .original)
+        XCTAssertEqual(saved?.palette.hexes["background"], "#112233")
+        XCTAssertEqual(saved?.palette.hexes["pauseText"], "#445566")
+        XCTAssertNil(defaults.object(forKey: "settings.color.background"), "migrates once")
+    }
+
+    func testUnreadableLooksDontCrash() {
+        defaults.set(Data("not json".utf8), forKey: "settings.looks")
+        XCTAssertEqual(AppSettings(defaults: defaults).looks.count, 1)
     }
 
     func testHexRoundTrip() {
@@ -132,10 +236,8 @@ final class AppSettingsTests: XCTestCase {
     func testStatusBarFollowsBackground() {
         let s = AppSettings(defaults: defaults)
         XCTAssertFalse(s.backgroundIsDark, "Paper is light")
-        s.style = .original
+        s.setHex("#000000", for: .background)
         XCTAssertTrue(s.backgroundIsDark)
-        s.setHex("#F0F0F0", for: .background)
-        XCTAssertFalse(s.backgroundIsDark)
     }
 
     func testPulseSwell() {

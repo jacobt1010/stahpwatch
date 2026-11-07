@@ -33,6 +33,7 @@ struct MainView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .ignoresSafeArea(.keyboard)
         .background(settings.color(.background).ignoresSafeArea())
         .background(TouchObserver { screenAwake.touched() })
         .fontDesign(settings.style.fontDesign)
