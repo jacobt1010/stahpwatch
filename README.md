@@ -1,6 +1,6 @@
 # stahpwatch
 
-A single-purpose analog stopwatch for iPhone: one big button, a dial drawn in code, fully custom colors, and a Lock Screen / Dynamic Island Live Activity. Swift + SwiftUI, iOS 17+, iPhone only, portrait only, no third-party packages. See [SPEC.md](SPEC.md) for the full design.
+A single-purpose stopwatch for iPhone: one big button, five dial styles drawn in code (Paper, Original, Pulse, Orbit and Block), fully custom colors, and a Lock Screen / Dynamic Island Live Activity. Swift + SwiftUI, iOS 17+, iPhone only, portrait only, no third-party packages. See [SPEC.md](SPEC.md) for the full design.
 
 <p align="center">
   <img src="docs/idle.png" width="160" alt="Idle: dial at 00:00.00 with the Start button and Customize pill">
@@ -9,7 +9,7 @@ A single-purpose analog stopwatch for iPhone: one big button, a dial drawn in co
   <img src="docs/customize.png" width="160" alt="Customize: color swatches with Match Background toggles">
   <img src="docs/custom-colors.png" width="160" alt="A custom color scheme: navy background, cream dial and coral hand">
 </p>
-<p align="center"><sub>Idle · Running · Paused · Customize · Custom colors</sub></p>
+<p align="center"><sub>Idle · Running · Paused · Customize · Custom colors, all in the Original style</sub></p>
 
 <p align="center">
   <img src="docs/demo.gif" width="280" alt="Start, Pause, Play, Pause and Stop in sequence, with the hands sweeping smoothly">
@@ -87,10 +87,11 @@ stahpwatch is released under the [MIT License](LICENSE). Copyright (c) 2026 Jaco
 | --- | --- |
 | `stahpwatch/Model/StopwatchState.swift` | Timestamp-only timing, transitions, UserDefaults store |
 | `stahpwatch/Model/StopwatchModel.swift` | Observable source of truth shared by the UI and Live Activity intents |
-| `stahpwatch/Model/AppSettings.swift` | The 14 settings, defaults, Match Background, reset |
+| `stahpwatch/Model/AppSettings.swift` | The dial style, the 14 settings, Match Background, reset |
+| `stahpwatch/Model/DialStyle.swift` | The five dial styles: font, button shape and default colors |
 | `stahpwatch/Model/ScreenAwakeController.swift` | Dim Timer hold and touch-reset countdown |
 | `stahpwatch/Model/LiveActivityController.swift` | Starts, updates and ends the Live Activity |
-| `stahpwatch/Views/` | `MainView`, `DialView` (Canvas in a TimelineView), `ControlsView`, `CustomizeView`, pickers |
+| `stahpwatch/Views/` | `MainView`, `DialView` and `DialRenderer` (a static face Canvas under a live TimelineView Canvas), `ControlsView`, `CustomizeView`, pickers |
 | `Shared/` | Live Activity attributes and the Pause / Resume / Reset intents (compiled into both targets) |
 | `LiveActivity/` | Widget extension: Lock Screen and Dynamic Island UI |
 
@@ -103,4 +104,5 @@ stahpwatch is released under the [MIT License](LICENSE). Copyright (c) 2026 Jaco
 - **Readout hundredths** are truncated, not rounded.
 - **Layout:** buttons scale with screen width. The dial scales with width too, but shrinks further on short screens (iPhone SE) so everything fits. Space for the "Paused" label and the Customize pill is always reserved, so the buttons never move between states.
 - **Live Activity running time** counts up with `Text(timerInterval:)` over a one-year range.
+- **Dial styles:** each style keeps its own colors, so switching styles never loses a customization. Reset to defaults restores Paper and every style's colors. Colors saved by v1 become Original's colors.
 - **Debug only:** launching with `-showCustomize` opens straight to Customize, for Simulator screenshots.

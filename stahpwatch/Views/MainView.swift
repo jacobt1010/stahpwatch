@@ -35,6 +35,7 @@ struct MainView: View {
         }
         .background(settings.color(.background).ignoresSafeArea())
         .background(TouchObserver { screenAwake.touched() })
+        .fontDesign(settings.style.fontDesign)
         .preferredColorScheme(settings.backgroundIsDark ? .dark : .light)
         .onChange(of: holdInputs, initial: true) { _, inputs in
             screenAwake.update(eligible: inputs.eligible, minutes: inputs.minutes)
@@ -46,11 +47,10 @@ struct MainView: View {
 
     private func stopwatch(_ layout: Layout) -> some View {
         VStack(spacing: 0) {
-            DialView(elapsed: { model.elapsed(at: $0) },
+            DialView(style: settings.style,
+                     elapsed: { model.elapsed(at: $0) },
                      isRunning: model.state.phase == .running,
-                     colors: DialColors(background: settings.color(.background),
-                                        fontTicks: settings.color(.fontTicks),
-                                        secondHand: settings.color(.secondHand)))
+                     colors: settings.dialColors())
                 .frame(width: 390 * layout.dialScale, height: 414 * layout.dialScale)
             ControlsView(layout: layout)
                 .padding(.top, Layout.dialGap * layout.s)

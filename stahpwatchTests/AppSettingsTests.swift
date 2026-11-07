@@ -18,13 +18,62 @@ final class AppSettingsTests: XCTestCase {
     func testDefaults() {
         let s = AppSettings(defaults: defaults)
         XCTAssertEqual(ColorSetting.allCases.count + 1, 14, "13 colors plus the Dim Timer")
+        XCTAssertEqual(s.style, .paper)
+        XCTAssertEqual(s.effectiveHex(.background), "#F2EBDD")
+        XCTAssertEqual(s.effectiveHex(.secondHand), "#D4431C")
+        XCTAssertEqual(s.dimMinutes, 10)
+        XCTAssertFalse(s.matchesBackground(.customizeText))
+        for text in [ColorSetting.startText, .pauseText, .playIcon, .stopIcon] {
+            XCTAssertTrue(s.matchesBackground(text))
+        }
+    }
+
+    func testOriginalKeepsV1Colors() {
+        let s = AppSettings(defaults: defaults)
+        s.style = .original
         XCTAssertEqual(s.effectiveHex(.background), "#000000")
         XCTAssertEqual(s.effectiveHex(.secondHand), "#FF8B00")
         XCTAssertEqual(s.effectiveHex(.play), "#4F7A5A")
-        XCTAssertEqual(s.dimMinutes, 10)
-        for text in [ColorSetting.startText, .pauseText, .playIcon, .stopIcon, .customizeText] {
-            XCTAssertTrue(s.matchesBackground(text))
+        XCTAssertEqual(s.effectiveHex(.customizeText), "#000000")
+    }
+
+    func testEveryStylePaletteIsComplete() {
+        for style in DialStyle.allCases {
+            let palette = style.defaultPalette
+            for setting in ColorSetting.allCases {
+                XCTAssertNotNil(HexColor.normalized(palette.hexes[setting.rawValue] ?? ""), "\(style) \(setting)")
+            }
         }
+    }
+
+    func testEachStyleKeepsItsOwnColors() {
+        let s = AppSettings(defaults: defaults)
+        s.setHex("#123456", for: .secondHand)
+        s.style = .block
+        XCTAssertEqual(s.effectiveHex(.secondHand), "#E4FF4A")
+        s.setHex("#654321", for: .secondHand)
+        s.style = .paper
+        XCTAssertEqual(s.effectiveHex(.secondHand), "#123456")
+
+        let relaunched = AppSettings(defaults: defaults)
+        XCTAssertEqual(relaunched.style, .paper)
+        XCTAssertEqual(relaunched.effectiveHex(.secondHand), "#123456")
+        relaunched.style = .block
+        XCTAssertEqual(relaunched.effectiveHex(.secondHand), "#654321")
+    }
+
+    func testV1ColorsMoveToOriginal() {
+        defaults.set("#112233", forKey: "settings.color.background")
+        defaults.set(false, forKey: "settings.match.pauseText")
+        defaults.set("#445566", forKey: "settings.color.pauseText")
+
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.style, .paper, "new default applies")
+        XCTAssertEqual(s.effectiveHex(.background), "#F2EBDD")
+        s.style = .original
+        XCTAssertEqual(s.effectiveHex(.background), "#112233")
+        XCTAssertEqual(s.effectiveHex(.pauseText), "#445566")
+        XCTAssertNil(defaults.object(forKey: "settings.color.background"), "migrates once")
     }
 
     func testMatchBackgroundFollowsLaterChanges() {
@@ -61,15 +110,17 @@ final class AppSettingsTests: XCTestCase {
     func testResetRestoresTable() {
         let s = AppSettings(defaults: defaults)
         s.setHex("#FFFFFF", for: .background)
-        s.setMatchesBackground(false, for: .customizeText)
+        s.setMatchesBackground(true, for: .customizeText)
+        s.style = .orbit
         s.dimMinutes = 42
         s.resetToDefaults()
+        XCTAssertEqual(s.style, .paper)
         for setting in ColorSetting.allCases where !setting.canMatchBackground {
-            XCTAssertEqual(s.effectiveHex(setting), setting.defaultHex, setting.title)
+            XCTAssertEqual(s.effectiveHex(setting), DialStyle.paper.defaultPalette.hexes[setting.rawValue], setting.title)
         }
-        XCTAssertTrue(s.matchesBackground(.customizeText))
+        XCTAssertFalse(s.matchesBackground(.customizeText))
         XCTAssertEqual(s.dimMinutes, 10)
-        XCTAssertEqual(AppSettings(defaults: defaults).effectiveHex(.background), "#000000")
+        XCTAssertEqual(AppSettings(defaults: defaults).effectiveHex(.background), "#F2EBDD")
     }
 
     func testHexRoundTrip() {
@@ -80,9 +131,21 @@ final class AppSettingsTests: XCTestCase {
 
     func testStatusBarFollowsBackground() {
         let s = AppSettings(defaults: defaults)
+        XCTAssertFalse(s.backgroundIsDark, "Paper is light")
+        s.style = .original
         XCTAssertTrue(s.backgroundIsDark)
         s.setHex("#F0F0F0", for: .background)
         XCTAssertFalse(s.backgroundIsDark)
+    }
+
+    func testPulseSwell() {
+        XCTAssertEqual(DialRenderer.swell(tick: 2, elapsed: 2.5), 1, "the current second is full size")
+        XCTAssertEqual(DialRenderer.swell(tick: 3, elapsed: 2.5), 0, "the next second hasn't started")
+        XCTAssertEqual(DialRenderer.swell(tick: 2, elapsed: 3.2), 0.5, accuracy: 1e-9, "the last second is fading")
+        XCTAssertEqual(DialRenderer.swell(tick: 2, elapsed: 3.5), 0, "the fade is over")
+        XCTAssertEqual(DialRenderer.swell(tick: 59, elapsed: 0), 0, "no fading tick at 00:00")
+        XCTAssertEqual(DialRenderer.swell(tick: 59, elapsed: 60.2), 0.5, accuracy: 1e-9, "fades across the minute")
+        XCTAssertEqual(DialRenderer.swell(tick: 2, elapsed: 3602.5), 1, "works after an hour")
     }
 }
 
