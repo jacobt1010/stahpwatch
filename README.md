@@ -52,6 +52,18 @@ The project uses no capabilities that need a paid account: no App Groups, push n
 
 **Free accounts expire after 7 days.** Apps signed with a free Apple account stop launching after 7 days. Reinstall from Xcode (just press Run again) to renew. Your settings and any running stopwatch are kept.
 
+## Releases
+
+`main` is the stable version. Each version installed on the owner's iPhone is tagged on `main` (`v1.1`, `v1.2`, and so on). New features are built on a branch named for the feature, such as `tap-to-start`, and merged into `main` only when they're ready.
+
+To install a specific version on a connected iPhone, for example to go back to an earlier release:
+
+```bash
+./Scripts/install.sh v1.1
+```
+
+It accepts any tag or branch. It builds in a temporary git worktree, so your working folder isn't touched, regenerates the Xcode project with XcodeGen, signs with `Config/Local.xcconfig`, and installs over the existing app so its data stays. Add `--simulator` to install on the booted Simulator instead, or `--device <UDID>` to pick a specific iPhone. Installing an older version keeps your data, but an older version may not understand settings saved by a newer one; see the notes in `Scripts/install.sh`.
+
 ## Test
 
 ```bash
