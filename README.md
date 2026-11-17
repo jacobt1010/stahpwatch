@@ -1,18 +1,22 @@
 # stahpwatch
 
-A single-purpose stopwatch for iPhone: one big button, five dial styles drawn in code (Paper, Original, Pulse, Orbit and Block), fully custom colors, and a Lock Screen / Dynamic Island Live Activity. Swift + SwiftUI, iOS 17+, iPhone only, portrait only, no third-party packages. See [SPEC.md](SPEC.md) for the full design.
+A single-purpose stopwatch for iPhone: one big button, five dial styles drawn in code (Paper, Original, Pulse, Orbit and Block), fully custom colors saved as Looks, and a Lock Screen / Dynamic Island Live Activity. Swift + SwiftUI, iOS 17+, iPhone only, portrait only, no third-party packages. See [SPEC.md](SPEC.md) for the full design and [ROADMAP.md](ROADMAP.md) for what's next.
 
 <p align="center">
-  <img src="docs/idle.png" width="160" alt="Idle: dial at 00:00.00 with the Start button and Customize pill">
-  <img src="docs/running.png" width="160" alt="Running: the hand sweeping at 07:41 with the Pause button">
-  <img src="docs/paused.png" width="160" alt="Paused at 23:04.61 with green Play and red Stop buttons">
-  <img src="docs/customize.png" width="160" alt="Customize: color swatches with Match Background toggles">
-  <img src="docs/custom-colors.png" width="160" alt="A custom color scheme: navy background, cream dial and coral hand">
+  <img src="docs/idle.png" width="170" alt="Idle in the Paper style: cream dial at 00:00.00, the Start button and the Customize palette button">
+  <img src="docs/running.png" width="170" alt="Running: the vermilion hand sweeping at 07:41 with the Pause button">
+  <img src="docs/paused.png" width="170" alt="Paused at 23:04.61 with green Play and red Stop buttons">
+  <img src="docs/customize.png" width="170" alt="Customize: the Looks and Style rows, color swatches and the Done button">
 </p>
-<p align="center"><sub>Idle · Running · Paused · Customize · Custom colors, all in the Original style</sub></p>
+<p align="center"><sub>Idle · Running · Paused · Customize, in Paper, the default style</sub></p>
 
 <p align="center">
-  <img src="docs/demo.gif" width="280" alt="Start, Pause, Play, Pause and Stop in sequence, with the hands sweeping smoothly">
+  <img src="docs/styles.png" width="720" alt="The five dial styles running side by side: Paper, Original, Pulse, Orbit and Block, each in its default colors">
+</p>
+<p align="center"><sub>Paper · Original · Pulse · Orbit · Block</sub></p>
+
+<p align="center">
+  <img src="docs/demo.gif" width="280" alt="Start, Pause, Play, Pause and Stop in sequence in the Paper style, with the hand sweeping smoothly">
 </p>
 
 ## Build
@@ -64,10 +68,12 @@ The tests cover elapsed-time math, every transition, saving and restoring state 
 The images in `docs/` come from the iPhone 17 Simulator with the status bar set to 9:41 (`xcrun simctl status_bar booted override --time 9:41`). The demo GIF is a Simulator screen recording (`xcrun simctl io booted recordVideo demo.mov`) converted with:
 
 ```bash
-swift Scripts/make_gif.swift demo.mov docs/demo.gif 320 15 1.6 31
+swift Scripts/make_gif.swift demo.mov docs/demo.gif 320 15 1.0 24.5
 ```
 
 The arguments are width, frames per second, and the start and end of the clip in seconds.
+
+`docs/styles.png` puts five Running screenshots side by side, one per style, each with that style's default colors.
 
 ## App icon
 
@@ -76,6 +82,10 @@ The arguments are width, frames per second, and the start and end of the clip in
 ```bash
 swift Scripts/make_icon.swift
 ```
+
+## Roadmap
+
+Planned work is in [ROADMAP.md](ROADMAP.md).
 
 ## License
 
@@ -103,7 +113,7 @@ stahpwatch is released under the [MIT License](LICENSE). Copyright (c) 2026 Jaco
 - **Inactive scene** (Control Center, notification shade, app switcher) releases the hold. Returning starts a fresh one, as on unlock.
 - **Status bar:** light text when white has more contrast on Background than black does (relative luminance below 0.179).
 - **Readout hundredths** are truncated, not rounded.
-- **Layout:** buttons scale with screen width. The dial scales with width too, but shrinks further on short screens (iPhone SE) so everything fits. Space for the "Paused" label and the Customize pill is always reserved, so the buttons never move between states.
+- **Layout:** buttons scale with screen width. The dial scales with width too, but shrinks further on short screens (iPhone SE) so everything fits. Space for the "Paused" label and the Customize button is always reserved, so the buttons never move between states.
 - **Live Activity running time** counts up with `Text(timerInterval:)` over a one-year range.
 - **Looks:** one Look is always active, and changing a color or style edits it, with no Save step. Changing style keeps the Look's colors; the Use Default Colors button applies the style's defaults. The New tile and Duplicate make a copy to experiment on. Colors customized before Looks existed became Looks, such as My Original.
 - **Dim Timer** isn't part of a Look, and it has its own reset in its picker.
