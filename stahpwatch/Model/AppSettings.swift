@@ -56,8 +56,11 @@ final class AppSettings {
 
     /// Never empty.
     private(set) var looks: [Look] {
-        didSet { Self.save(looks, to: defaults) }
+        didSet { saveLooks() }
     }
+    /// Saved Looks this version can't read at all, such as ones from a newer version.
+    /// They're never shown, and every save writes them back unchanged.
+    @ObservationIgnored private let unreadableLooks: [JSONValue]
     private(set) var activeLookID: UUID {
         didSet { defaults.set(activeLookID.uuidString, forKey: Self.activeLookKey) }
     }
@@ -70,15 +73,18 @@ final class AppSettings {
     private static let dimKey = "settings.dimMinutes"
     private static let looksKey = "settings.looks"
     private static let activeLookKey = "settings.activeLook"
+    /// Where unreadable Looks data is kept before it's replaced, so it's never lost.
+    static let unreadableLooksBackupKey = "settings.looks.unreadableBackup"
     private static let maxLookNameLength = 30
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         dimMinutes = defaults.object(forKey: Self.dimKey) as? Int ?? Self.defaultDimMinutes
         let loaded = Self.loadLooks(from: defaults)
+        unreadableLooks = loaded.unreadable
         looks = loaded.looks
         activeLookID = loaded.activeID
-        Self.save(loaded.looks, to: defaults)
+        saveLooks()
         defaults.set(loaded.activeID.uuidString, forKey: Self.activeLookKey)
     }
 
@@ -229,30 +235,79 @@ final class AppSettings {
         return (1...).lazy.map { "Look \($0)" }.first { !names.contains($0) } ?? "Look"
     }
 
-    private static func save(_ looks: [Look], to defaults: UserDefaults) {
-        if let data = try? JSONEncoder().encode(looks) {
-            defaults.set(data, forKey: looksKey)
-        }
+    /// Writes the readable Looks, then the unreadable ones exactly as they were found.
+    private func saveLooks() {
+        guard let readable = try? looks.map(JSONValue.init(encoding:)),
+              let data = try? JSONEncoder().encode(readable + unreadableLooks) else { return }
+        defaults.set(data, forKey: Self.looksKey)
     }
 
-    private static func loadLooks(from defaults: UserDefaults) -> (looks: [Look], activeID: UUID) {
-        var looks = defaults.data(forKey: looksKey)
-            .flatMap { try? JSONDecoder().decode([Look].self, from: $0) } ?? []
-        if let id = defaults.string(forKey: activeLookKey).flatMap(UUID.init(uuidString:)),
-           looks.contains(where: { $0.id == id }) {
-            return (looks, id)
+    private struct Loaded {
+        var looks: [Look]
+        var unreadable: [JSONValue]
+        var activeID: UUID
+    }
+
+    /// Reads saved Looks without ever losing data this version doesn't understand:
+    /// each Look is read on its own, Looks it can't read are kept aside, and data that
+    /// isn't a list of Looks at all is backed up before a fresh Look replaces it.
+    private static func loadLooks(from defaults: UserDefaults) -> Loaded {
+        var looks: [Look] = []
+        var unreadable: [JSONValue] = []
+        if let data = defaults.data(forKey: looksKey) {
+            if let items = try? JSONDecoder().decode([JSONValue].self, from: data) {
+                for item in items {
+                    if let look = try? item.decode(Look.self) {
+                        looks.append(look)
+                    } else {
+                        unreadable.append(item)
+                    }
+                }
+            } else if defaults.object(forKey: unreadableLooksBackupKey) == nil {
+                defaults.set(data, forKey: unreadableLooksBackupKey)
+            }
         }
 
-        // Before Looks took over, each style kept its own colors. Anything customized becomes a
-        // Look, so nothing is lost, and the look the app was showing becomes the active Look.
+        let legacy = migrateLegacyColors(into: &looks, from: defaults)
+
+        if let id = defaults.string(forKey: activeLookKey).flatMap(UUID.init(uuidString:)),
+           looks.contains(where: { $0.id == id }) {
+            return Loaded(looks: looks, unreadable: unreadable, activeID: id)
+        }
+        // Coming from before Looks: the look the app was showing becomes the active Look.
+        if let (style, palette) = legacy {
+            if let current = looks.first(where: { $0.style == style && $0.palette == palette }) {
+                return Loaded(looks: looks, unreadable: unreadable, activeID: current.id)
+            }
+            let current = Look(name: unusedName(among: looks), style: style, palette: palette)
+            return Loaded(looks: looks + [current], unreadable: unreadable, activeID: current.id)
+        }
+        // The active Look is missing or unreadable: use the first one this version can show.
+        if let first = looks.first {
+            return Loaded(looks: looks, unreadable: unreadable, activeID: first.id)
+        }
+        let fresh = Look(name: unusedName(among: looks), style: defaultStyle, palette: defaultStyle.defaultPalette)
+        return Loaded(looks: [fresh], unreadable: unreadable, activeID: fresh.id)
+    }
+
+    /// Before Looks took over, each style kept its own colors. Anything customized becomes a
+    /// Look, so nothing is lost. Returns the style and colors the app was showing, if there
+    /// was any data from before Looks.
+    private static func migrateLegacyColors(into looks: inout [Look], from defaults: UserDefaults)
+        -> (DialStyle, Palette)? {
         var working: [DialStyle: Palette] = [:]
+        var found = false
         for style in DialStyle.allCases {
             let key = "settings.palette.\(style.rawValue)"
-            working[style] = defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(Palette.self, from: $0) }
+            if let data = defaults.data(forKey: key) {
+                found = true
+                working[style] = try? JSONDecoder().decode(Palette.self, from: data)
+            }
             defaults.removeObject(forKey: key)
         }
         if let palette = takeV1Palette(from: defaults) {
             working[.original] = palette
+            found = true
         }
         for style in DialStyle.allCases {
             guard let palette = working[style], palette != style.defaultPalette,
@@ -261,15 +316,11 @@ final class AppSettings {
         }
 
         let oldStyleKey = "settings.dialStyle"
-        let style = defaults.string(forKey: oldStyleKey).flatMap(DialStyle.init(rawValue:)) ?? defaultStyle
+        let oldStyle = defaults.string(forKey: oldStyleKey)
         defaults.removeObject(forKey: oldStyleKey)
-        let palette = working[style] ?? style.defaultPalette
-        if let current = looks.first(where: { $0.style == style && $0.palette == palette }) {
-            return (looks, current.id)
-        }
-        let current = Look(name: unusedName(among: looks), style: style, palette: palette)
-        looks.append(current)
-        return (looks, current.id)
+        guard found || oldStyle != nil else { return nil }
+        let style = oldStyle.flatMap(DialStyle.init(rawValue:)) ?? defaultStyle
+        return (style, working[style] ?? style.defaultPalette)
     }
 
     /// v1 saved one set of colors. Those were the Original look.

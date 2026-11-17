@@ -204,6 +204,7 @@ A **Look** is a named combination of one dial style and a full palette (the 13 c
 - **Duplicate** (long-press menu): adds a copy of that Look right after it, named "<Name> Copy", then "<Name> Copy 2" and so on if that's taken, and makes it active. The base name is cut to 23 characters so the result fits.
 - **Rename** (long-press menu): asks for a name, prefilled with the current one.
 - **Delete:** from the long-press menu or the **Delete This Look** button at the bottom of Customize (which deletes the active Look). Both ask first: "Delete <Name>?" (Delete / Cancel). Deleting the active Look switches to the next Look, or the previous one if it was last. The last remaining Look can't be deleted: neither the menu item nor the button appears.
+- **A style from a newer version** shows as Paper, with its saved style kept (see Storage).
 - **Names:** trimmed of surrounding spaces and limited to 30 characters. A blank name is ignored (a new Look gets the default name instead). Duplicate names are allowed.
 - **The name prompt** is the platform's standard alert with a text field (title "Name this Look", Cancel / Save). It always uses the system font and colors, whatever the active style.
 
@@ -305,6 +306,7 @@ All in UserDefaults:
 | `settings.looks` | JSON array of Looks |
 | `settings.activeLook` | the active Look's UUID string |
 | `settings.dimMinutes` | integer; 0 = Off |
+| `settings.looks.unreadableBackup` | Looks data that couldn't be read at all, kept before it was replaced |
 
 A Look in JSON looks like this:
 
@@ -314,7 +316,19 @@ A Look in JSON looks like this:
                "matches": { "startText": true, "...": "..." } } }
 ```
 
-Palette keys are the setting identifiers: `background`, `fontTicks`, `secondHand`, `start`, `startText`, `pause`, `pauseText`, `play`, `playIcon`, `stop`, `stopIcon`, `customize`, `customizeText`. Colors are uppercase `#RRGGBB` in sRGB. A missing color falls back to the style's default. Unreadable Looks data loads as a fresh "Look 1".
+Palette keys are the setting identifiers: `background`, `fontTicks`, `secondHand`, `start`, `startText`, `pause`, `pauseText`, `play`, `playIcon`, `stop`, `stopIcon`, `customize`, `customizeText`. Colors are uppercase `#RRGGBB` in sRGB. A missing color falls back to the style's default.
+
+**Forward compatibility.** Every version must keep, and never destroy, saved data it doesn't understand. That way, installing an older version over a newer one's data loses nothing:
+
+- **Unknown fields** in a Look or its palette, and unknown color keys, are kept and written back unchanged on every save.
+- **An unknown dial style** keeps the Look. It's drawn as Paper, but the saved style name stays until the user picks a style for that Look.
+- **A Look that can't be read at all** (for example, a missing name) isn't shown, but every save writes it back exactly as found. Other Looks still load.
+- **If the active Look can't be shown,** the first Look that can becomes active. If none can, a fresh "Look 1" is added, and the unreadable ones are kept alongside it.
+- **Data that isn't a list of Looks at all** is copied to `settings.looks.unreadableBackup` before a fresh "Look 1" replaces it.
+- **An unknown stopwatch state** keeps its time: it counts if a `runStart` is saved, and is paused otherwise. Nothing is written back until the stopwatch is used.
+- **Never rename or reuse a key, or change the meaning of a value.** Add new keys instead.
+
+v1.1 predates these rules. It replaces all Looks if any Look is unreadable or uses an unknown style, and drops unknown Look fields when it opens. Downgrading to v1.1 from a version that adds styles or Look fields loses Looks.
 
 ## iOS implementation notes
 
@@ -330,11 +344,12 @@ Swift and SwiftUI, no third-party packages, iOS 17 and later.
 **Structure**
 
 - `StopwatchState` / `StopwatchStore` / `StopwatchModel`: timing, transitions, persistence. The model is shared by the UI and the intents.
+- `JSONValue`: holds saved data this version doesn't understand, so it can be written back unchanged.
 - `AppSettings`: Looks, the active Look, colors and Match Background, migration.
 - `DialStyle` and `Look`: style metadata and default palettes; the saved Look.
 - `ScreenAwakeController`, `LiveActivityController`.
 - Views: `MainView`, `ControlsView` (including `IconButton`), `DialView` (a static face Canvas under a live Canvas in a `TimelineView`), `DialRenderer` (all five styles), `CustomizeView`, `LooksRow`, `DialTile`, `ColorPickerSheet`, `DimTimerPicker`, `NamePrompt`, `TouchObserver`.
-- Unit tests for elapsed-time math, every transition, saving and restoring state, readout formatting (including the one-hour switch), Looks (new, duplicate, rename, delete, live edits, default colors, migration), Pulse's swell, the screen-awake rules, and the icon button's minimum size. An opt-in snapshot test renders every style, and the Idle and Paused screens at iPhone SE and Pro Max sizes.
+- Unit tests for elapsed-time math, every transition, saving and restoring state, readout formatting (including the one-hour switch), Looks (new, duplicate, rename, delete, live edits, default colors, migration, and data from newer versions), Pulse's swell, the screen-awake rules, and the icon button's minimum size. An opt-in snapshot test renders every style, and the Idle and Paused screens at iPhone SE and Pro Max sizes.
 
 **App icon:** Instrument, a simplified Paper dial: cream background, ink ring with 12 ticks, a vermilion hand with a counterweight. It's drawn by `Scripts/make_icon.swift`, with no SF Symbols (Apple's license excludes them from app icons). It's a placeholder until the owner designs a final icon.
 

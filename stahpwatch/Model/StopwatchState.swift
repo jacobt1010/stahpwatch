@@ -70,9 +70,13 @@ struct StopwatchStore {
     let defaults: UserDefaults
 
     func load() -> StopwatchState {
-        let phase = defaults.string(forKey: Key.phase).flatMap(Phase.init(rawValue:)) ?? .idle
+        let saved = defaults.string(forKey: Key.phase)
         let accumulated = defaults.double(forKey: Key.accumulated)
         let runStart = defaults.object(forKey: Key.runStart) as? Date
+        // A state from a newer version keeps its time: counting if it has a start date,
+        // otherwise paused. Nothing is written back until the stopwatch is used.
+        let phase = saved.flatMap(Phase.init(rawValue:))
+            ?? (saved == nil ? .idle : (runStart != nil ? .running : .paused))
         switch phase {
         case .idle:
             return StopwatchState()

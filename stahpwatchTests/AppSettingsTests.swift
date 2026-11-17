@@ -222,9 +222,93 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertNil(defaults.object(forKey: "settings.color.background"), "migrates once")
     }
 
-    func testUnreadableLooksDontCrash() {
-        defaults.set(Data("not json".utf8), forKey: "settings.looks")
+    func testUnreadableLooksDataIsBackedUpNotLost() {
+        let garbage = Data("not json".utf8)
+        defaults.set(garbage, forKey: "settings.looks")
         XCTAssertEqual(AppSettings(defaults: defaults).looks.count, 1)
+        XCTAssertEqual(defaults.data(forKey: AppSettings.unreadableLooksBackupKey), garbage)
+    }
+
+    // MARK: Data saved by a newer version
+
+    /// Saves Looks as raw JSON objects, the way a newer version might.
+    private func saveRaw(_ looks: [[String: Any]], active: String) {
+        defaults.set(try! JSONSerialization.data(withJSONObject: looks), forKey: "settings.looks")
+        defaults.set(active, forKey: "settings.activeLook")
+    }
+
+    private func rawLooks() -> [[String: Any]] {
+        try! JSONSerialization.jsonObject(with: defaults.data(forKey: "settings.looks")!) as! [[String: Any]]
+    }
+
+    private func raw(_ id: String, _ name: String, style: String, extra: [String: Any] = [:]) -> [String: Any] {
+        let palette = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(DialStyle.paper.defaultPalette))
+        return ["id": id, "name": name, "style": style, "palette": palette].merging(extra) { a, _ in a }
+    }
+
+    let idA = "11111111-1111-1111-1111-111111111111"
+    let idB = "22222222-2222-2222-2222-222222222222"
+
+    func testUnknownStyleKeepsTheLookAndItsStyle() {
+        saveRaw([raw(idA, "Paper Look", style: "paper"), raw(idB, "Dusk Look", style: "dusk")], active: idB)
+
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.looks.map(\.name), ["Paper Look", "Dusk Look"], "nothing is deleted")
+        XCTAssertEqual(s.activeLook.name, "Dusk Look")
+        XCTAssertEqual(s.style, .paper, "an unknown style draws as Paper")
+        XCTAssertFalse(s.activeLook.hasKnownStyle)
+
+        s.setHex("#123456", for: .secondHand)
+        XCTAssertEqual(rawLooks()[1]["style"] as? String, "dusk", "editing colors keeps the newer style")
+
+        s.style = .orbit
+        XCTAssertEqual(rawLooks()[1]["style"] as? String, "orbit", "choosing a style replaces it")
+    }
+
+    func testUnknownFieldsSurviveSaving() {
+        var look = raw(idA, "Mine", style: "paper", extra: ["textScale": 1.2, "font": ["name": "Serif"]])
+        var palette = look["palette"] as! [String: Any]
+        palette["gradient"] = true
+        var hexes = palette["hexes"] as! [String: String]
+        hexes["lapText"] = "#ABCDEF"
+        palette["hexes"] = hexes
+        look["palette"] = palette
+        saveRaw([look], active: idA)
+
+        let s = AppSettings(defaults: defaults)
+        s.setHex("#123456", for: .secondHand)
+        s.rename(s.activeLook, to: "Renamed")
+
+        let saved = rawLooks()[0]
+        XCTAssertEqual(saved["name"] as? String, "Renamed")
+        XCTAssertEqual(saved["textScale"] as? Double, 1.2)
+        XCTAssertEqual((saved["font"] as? [String: String])?["name"], "Serif")
+        let savedPalette = saved["palette"] as! [String: Any]
+        XCTAssertEqual(savedPalette["gradient"] as? Bool, true)
+        XCTAssertEqual((savedPalette["hexes"] as? [String: String])?["lapText"], "#ABCDEF")
+        XCTAssertEqual((savedPalette["hexes"] as? [String: String])?["secondHand"], "#123456")
+    }
+
+    func testUnreadableLookIsKeptAndOthersStillLoad() {
+        let broken: [String: Any] = ["id": idB, "name": 42, "layout": "v3"]
+        saveRaw([raw(idA, "Good", style: "block"), broken], active: idB)
+
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.looks.map(\.name), ["Good"])
+        XCTAssertEqual(s.activeLook.name, "Good", "falls back to a Look this version can show")
+        XCTAssertEqual(s.style, .block)
+
+        s.addLook(named: "New")
+        let saved = rawLooks()
+        XCTAssertEqual(saved.count, 3, "the unreadable Look is written back")
+        XCTAssertTrue(saved.contains { $0["layout"] as? String == "v3" && $0["name"] as? Int == 42 })
+    }
+
+    func testOnlyUnreadableLooksStillKeepsThem() {
+        saveRaw([["id": idA, "future": true]], active: idA)
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.looks.map(\.name), ["Look 1"])
+        XCTAssertEqual(rawLooks().count, 2)
     }
 
     func testCustomizeSettingsKeepTheirStorageKeys() {
