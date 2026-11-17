@@ -81,6 +81,18 @@ final class StopwatchStoreTests: XCTestCase {
         XCTAssertNil(defaults.object(forKey: "stopwatch.runStart"))
     }
 
+    func testUnknownStateFromANewerVersionKeepsTime() {
+        let start = Date(timeIntervalSinceReferenceDate: 1000)
+        defaults.set("lapping", forKey: "stopwatch.state")
+        defaults.set(5.0, forKey: "stopwatch.accumulated")
+        defaults.set(start, forKey: "stopwatch.runStart")
+        XCTAssertEqual(StopwatchStore(defaults: defaults).load(), StopwatchState(phase: .running, accumulated: 5, runStart: start))
+
+        defaults.removeObject(forKey: "stopwatch.runStart")
+        XCTAssertEqual(StopwatchStore(defaults: defaults).load(), StopwatchState(phase: .paused, accumulated: 5, runStart: nil))
+        XCTAssertEqual(defaults.string(forKey: "stopwatch.state"), "lapping", "loading writes nothing back")
+    }
+
     func testRunningWithoutStartFallsBackToPaused() {
         defaults.set("running", forKey: "stopwatch.state")
         defaults.set(5.0, forKey: "stopwatch.accumulated")

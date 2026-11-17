@@ -1,9 +1,30 @@
 import SwiftUI
 
 /// One color scheme: the 13 color settings, keyed by `ColorSetting.rawValue`.
-struct Palette: Codable, Equatable {
+/// Color keys this version doesn't know stay in the dictionaries, and unknown fields stay in
+/// `extras`, so a newer version's palette survives being saved by this one.
+struct Palette: Equatable {
     var hexes: [String: String]
     var matches: [String: Bool]
+    var extras: [String: JSONValue] = [:]
+}
+
+extension Palette: Codable {
+    private static let known: Set<String> = ["hexes", "matches"]
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: AnyCodingKey.self)
+        hexes = try c.decode([String: String].self, forKey: AnyCodingKey("hexes"))
+        matches = try c.decode([String: Bool].self, forKey: AnyCodingKey("matches"))
+        extras = try c.unknownFields(besides: Self.known)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: AnyCodingKey.self)
+        try c.encodeUnknownFields(extras)
+        try c.encode(hexes, forKey: AnyCodingKey("hexes"))
+        try c.encode(matches, forKey: AnyCodingKey("matches"))
+    }
 }
 
 /// The selectable stopwatch faces. Each has its own drawing, font and default colors.
