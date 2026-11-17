@@ -10,11 +10,13 @@
 # It builds in a temporary git worktree, so your working folder and its
 # uncommitted changes are never touched. Signing comes from Config/Local.xcconfig.
 #
-# Going back to an older version keeps your data, but an older version only
-# understands settings in its own format:
-# - v1.1 replaces all saved Looks with a fresh "Look 1" if any Look uses
-#   something it doesn't know, such as a dial style added later. It also drops
-#   Look fields it doesn't know every time it opens.
+# Going back to an older version keeps your data:
+# - v1.2 and later keep anything they don't understand and write it back
+#   unchanged, so going back to them is safe. A Look with a newer dial style
+#   shows as Paper until you return to the newer version.
+# - v1.1 is the exception: it replaces all saved Looks with a fresh "Look 1" if
+#   any Look uses something it doesn't know, such as a dial style added later,
+#   and drops Look fields it doesn't know every time it opens.
 # - Versions before Looks ignore saved Looks but leave them in place, so they
 #   come back when you install a newer version again.
 # - A running or paused stopwatch and the Dim Timer carry over in both directions.

@@ -62,7 +62,7 @@ To install a specific version on a connected iPhone, for example to go back to a
 ./Scripts/install.sh v1.1
 ```
 
-It accepts any tag or branch. It builds in a temporary git worktree, so your working folder isn't touched, regenerates the Xcode project with XcodeGen, signs with `Config/Local.xcconfig`, and installs over the existing app so its data stays. Add `--simulator` to install on the booted Simulator instead, or `--device <UDID>` to pick a specific iPhone. Installing an older version keeps your data, but an older version may not understand settings saved by a newer one; see the notes in `Scripts/install.sh`.
+It accepts any tag or branch. It builds in a temporary git worktree, so your working folder isn't touched, regenerates the Xcode project with XcodeGen, signs with `Config/Local.xcconfig`, and installs over the existing app so its data stays. Add `--simulator` to install on the booted Simulator instead, or `--device <UDID>` to pick a specific iPhone. Installing an older version keeps your data. From v1.2 on, an older version keeps settings it doesn't understand, so going back is safe; v1.1 can lose saved Looks. See the notes in `Scripts/install.sh`.
 
 ## Test
 
