@@ -35,7 +35,7 @@ enum DialRenderer {
 
     // MARK: Paper
 
-    private static let paperSub = CGPoint(x: 195, y: 284)
+    private static let paperSub = CGPoint(x: 195, y: 273)
 
     private static func paperFace(_ c: inout GraphicsContext, _ colors: DialColors) {
         let ink = colors.fontTicks
@@ -45,18 +45,18 @@ enum DialRenderer {
             tick(&c, center, turn: Double(i) / 60, outer: 169, length: major ? 18 : 8, width: major ? 2 : 0.8, color: ink)
         }
         for n in 1...12 {
-            number(&c, "\(n * 5)", center, turn: Double(n) / 12, radius: 130, size: 23, design: .serif, color: ink)
+            number(&c, "\(n * 5)", center, turn: Double(n) / 12, radius: 122, size: 28, design: .serif, color: ink)
         }
-        c.stroke(circle(paperSub, 34), with: .color(ink), lineWidth: 1)
+        c.stroke(circle(paperSub, 31), with: .color(ink), lineWidth: 1)
         for i in 0..<6 {
-            tick(&c, paperSub, turn: Double(i) / 6, outer: 34, length: 6, width: 1.2, color: ink)
+            tick(&c, paperSub, turn: Double(i) / 6, outer: 31, length: 6, width: 1.2, color: ink)
         }
     }
 
     private static func paperLive(_ c: inout GraphicsContext, _ t: TimeInterval, _ colors: DialColors) {
         let hand = colors.secondHand
         readout(&c, t, y: 149, size: 22, design: .serif, color: colors.fontTicks)
-        line(&c, paperSub, point(paperSub, subTurn(t), 26), width: 1.5, color: hand, cap: .round)
+        line(&c, paperSub, point(paperSub, subTurn(t), 23), width: 1.5, color: hand, cap: .round)
         let turn = mainTurn(t)
         line(&c, point(center, turn + 0.5, 44), point(center, turn, 164), width: 1.6, color: hand)
         c.fill(circle(point(center, turn + 0.5, 44), 6.5), with: .color(hand))
