@@ -14,7 +14,7 @@ struct Layout {
     static let buttonHeight: CGFloat = 106
     static let pausedGap: CGFloat = 73        // button row bottom → "Paused"
     static let pausedHeight: CGFloat = 58
-    static let pillHeight: CGFloat = 47
+    static let pillHeight: CGFloat = 47       // Customize / Done icon button
     static let pillMinGap: CGFloat = 8
     static let bottomPad: CGFloat = 12
 

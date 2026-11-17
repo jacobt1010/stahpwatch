@@ -45,7 +45,7 @@ struct CustomizeView: View {
         }
         .scrollIndicators(.hidden)
         .foregroundStyle(ink)
-        // End the list above the fixed Main Menu pill.
+        // End the list above the fixed Done button.
         .padding(.bottom, (Layout.pillHeight + Layout.bottomPad + 12) * layout.s)
         .sheet(item: $editing) { setting in
             ColorPickerSheet(title: setting.title, initial: settings.color(setting)) { color in

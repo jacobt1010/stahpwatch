@@ -22,7 +22,8 @@ struct MainView: View {
                 } else {
                     stopwatch(layout)
                 }
-                PillButton(title: showCustomize ? "Main Menu" : "Customize", layout: layout) {
+                IconButton(systemImage: showCustomize ? "checkmark" : "paintpalette",
+                           label: showCustomize ? "Done" : "Customize", layout: layout) {
                     showCustomize.toggle()
                 }
                 .padding(.bottom, Layout.bottomPad * layout.s)

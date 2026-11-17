@@ -25,8 +25,8 @@ enum ColorSetting: String, CaseIterable, Identifiable {
         case .playIcon: "Play Icon"
         case .stop: "Stop"
         case .stopIcon: "Stop Icon"
-        case .customize: "Customize Btn"
-        case .customizeText: "Customize Text"
+        case .customize: "Customize Button"
+        case .customizeText: "Customize Icon"
         }
     }
 

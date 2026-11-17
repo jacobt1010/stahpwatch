@@ -63,24 +63,31 @@ struct ControlsView: View {
     }
 }
 
-/// The Customize / Main Menu pill.
-struct PillButton: View {
+/// The Customize and Done icon buttons at the bottom center, shaped like the dial style's buttons.
+struct IconButton: View {
     @Environment(AppSettings.self) private var settings
-    let title: String
+    let systemImage: String
+    let label: String
     let layout: Layout
     let action: () -> Void
+
+    static let referenceWidth: CGFloat = 80
+    static let minimumTarget: CGFloat = 44
 
     var body: some View {
         let s = layout.s
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 20 * s, weight: .bold))
+            Image(systemName: systemImage)
+                .font(.system(size: 22 * s, weight: .semibold))
                 .foregroundStyle(settings.color(.customizeText))
-                .frame(width: 168 * s, height: Layout.pillHeight * s)
-                .background(settings.color(.customize), in: RoundedRectangle(cornerRadius: 30 * s))
+                .frame(width: max(Self.minimumTarget, Self.referenceWidth * s),
+                       height: max(Self.minimumTarget, Layout.pillHeight * s))
+                .background(settings.color(.customize),
+                            in: RoundedRectangle(cornerRadius: settings.style.buttonRadius * s))
+                .contentShape(Rectangle())
         }
         .buttonStyle(PressDimStyle())
-        .accessibilityLabel(title)
+        .accessibilityLabel(label)
     }
 }
 

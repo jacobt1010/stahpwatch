@@ -25,15 +25,18 @@ final class DialSnapshot: XCTestCase {
         }
     }
 
-    /// Renders the Paused screen (the tallest state) at safe-area sizes: iPhone SE (375 × 647)
+    /// Renders the Idle and Paused screens at safe-area sizes: iPhone SE (375 × 647)
     /// and the largest Pro Max (440 × 868), to check the layout fits without scrolling.
     func testRenderLayouts() throws {
         guard let dir = ProcessInfo.processInfo.environment["DIAL_SNAPSHOT_DIR"] else { throw XCTSkip("DIAL_SNAPSHOT_DIR not set") }
         let defaults = UserDefaults(suiteName: "stahpwatch.snapshot")!
         defaults.removePersistentDomain(forName: "stahpwatch.snapshot")
-        let model = StopwatchModel(store: StopwatchStore(defaults: defaults), liveActivity: nil)
-        model.start(at: .now - 462.18)
-        model.pause()
+        let idle = StopwatchModel(store: StopwatchStore(defaults: UserDefaults(suiteName: "stahpwatch.snapshot.idle")!), liveActivity: nil)
+        idle.reset()
+        let paused = StopwatchModel(store: StopwatchStore(defaults: defaults), liveActivity: nil)
+        paused.start(at: .now - 462.18)
+        paused.pause()
+        for (state, model) in [("idle", idle), ("paused", paused)] {
         for (name, size) in [("layout-se", CGSize(width: 375, height: 647)), ("layout-promax", CGSize(width: 440, height: 868))] {
             let view = MainView()
                 .environment(model)
@@ -43,7 +46,8 @@ final class DialSnapshot: XCTestCase {
             let renderer = ImageRenderer(content: view)
             renderer.scale = 1
             let data = try XCTUnwrap(renderer.uiImage?.pngData())
-            try data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
+            try data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name)-\(state).png"))
+        }
         }
     }
 }

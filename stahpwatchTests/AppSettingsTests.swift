@@ -227,6 +227,32 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(AppSettings(defaults: defaults).looks.count, 1)
     }
 
+    func testCustomizeSettingsKeepTheirStorageKeys() {
+        // The labels describe the icon button, but the keys inside saved Looks stay the same.
+        XCTAssertEqual(ColorSetting.customize.rawValue, "customize")
+        XCTAssertEqual(ColorSetting.customizeText.rawValue, "customizeText")
+        XCTAssertEqual(ColorSetting.customize.title, "Customize Button")
+        XCTAssertEqual(ColorSetting.customizeText.title, "Customize Icon")
+
+        var look = Look(name: "Saved", style: .paper, palette: DialStyle.paper.defaultPalette)
+        look.palette.hexes["customize"] = "#123456"
+        look.palette.hexes["customizeText"] = "#ABCDEF"
+        look.palette.matches["customizeText"] = false
+        defaults.set(try! JSONEncoder().encode([look]), forKey: "settings.looks")
+        defaults.set(look.id.uuidString, forKey: "settings.activeLook")
+        let s = AppSettings(defaults: defaults)
+        XCTAssertEqual(s.effectiveHex(.customize), "#123456")
+        XCTAssertEqual(s.effectiveHex(.customizeText), "#ABCDEF")
+    }
+
+    func testIconButtonMeetsMinimumTapSize() {
+        for width in [CGFloat(320), 375, 393, 440] {
+            let s = Layout(width: width, height: 800).s
+            XCTAssertGreaterThanOrEqual(max(IconButton.minimumTarget, IconButton.referenceWidth * s), 44)
+            XCTAssertGreaterThanOrEqual(max(IconButton.minimumTarget, Layout.pillHeight * s), 44)
+        }
+    }
+
     func testHexRoundTrip() {
         XCTAssertEqual(HexColor.hex(from: Color(hex: "#D5CB88")), "#D5CB88")
         XCTAssertEqual(HexColor.normalized("ff8b00"), "#FF8B00")
